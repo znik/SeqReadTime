@@ -11,6 +11,8 @@
 
 #define NPAD_POWER	3
 #define NPAD ((1<<NPAD_POWER) - 1)
+#define TWICE(x)	x x
+#define TIMES_256(x)	TWICE(TWICE(TWICE(TWICE(TWICE(TWICE(TWICE(TWICE(x))))))))
 
 static FILE *h_log;
 
@@ -40,17 +42,20 @@ void workCycle(unsigned logSize) {
 	cur->p = first;
 
 	register chunk_t* x = first->p;
-	register int n, m;
+	register int n;
 	swatch t;
 	t.reset();
 	for (n = 0; n < 128; ++n) {
-		//x = first->p;
-		//while(x != first) {
-		//	x = x->p;
-		//}
-		for (m = 0; m < (1 << logSize); ++m) {
-			NO_OPTIMIZE((first + m)->p->p);
+		register int remain = (1 << logSize) / 256;
+		// Increase load instructions ratio in respect to branch instructions.
+		x = first->p;
+		while(remain--) {
+			TIMES_256(x = x->p;)
 		}
+
+		//for (m = 0; m < (1 << logSize); ++m) {
+		//	NO_OPTIMIZE((first + m)->p->p);
+		//}
 	}
 	long long elapsed = t.get();
 	printf("WS: %d KB, items: %d, time/128items: %d picosec\n",
